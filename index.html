@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Sketching</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: white; padding-top: 45px; padding-left: 10px; padding-right: 10px; padding-bottom: 45px; }
+        .controls { position: fixed; top: 0; left: 0; right: 0; width: 100%; display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; align-content: flex-start; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 999; }
+        #folderBtns { display: flex; flex-wrap: wrap; gap: 10px; }
+        #seriesBtns { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; padding: 10px; background: white; box-shadow: 0 -2px 8px rgba(0,0,0,0.1); z-index: 999; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+        .series-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+        .series-info { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; position: relative; }
+        .info-icon { cursor: help; font-weight: bold; color: #333; display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; position: relative; }
+        .info-icon::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: white; color: #666; padding: 10px 12px; border: 1px solid #ccc; border-radius: 0; font-size: 11px; font-weight: normal; width: 400px; display: block; white-space: normal; word-wrap: break-word; text-align: justify; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 1001; }
+        .info-icon:hover::after { opacity: 1; }
+        button { padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; font-size: 12px; border-radius: 3px; white-space: nowrap; }
+        button:hover { background: #e0e0e0; }
+        button.active { background: #333; color: white; border-color: #333; }
+        .container { display: flex; flex-direction: column; gap: 5px; }
+        .row { display: flex; gap: 5px; max-height: 60vh; }
+        .img-box { flex: 1; overflow: hidden; cursor: pointer; background: #f5f5f5; aspect-ratio: 1/1; }
+        .img-box img { width: 100%; height: 100%; object-fit: contain; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 20px; max-width: 90%; max-height: 90%; position: relative; }
+        .modal-close { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: #333; color: white; border: none; cursor: pointer; font-size: 18px; padding: 0; }
+        .modal img { width: 100%; height: auto; max-height: 80vh; }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <div id="folderBtns"></div>
+    </div>
+    <div id="seriesBtns">
+        <div class="series-info">
+            <span>"Control Sketching", Gabriele de Seta (2026)</span>
+            <span class="info-icon" data-tooltip="Interactive visualization of 450 outputs of the Samsung Sketch-to-Image app, a Galaxy AI feature introduced with One UI 6.1.1 and discontinued with One UI 7. Sketch-to-Image utilizes user sketches to control a proprietary image diffusion model that transforms drawings into images in various styles. Every row of images is prompted with a single sketch (first column) and contains three outputs generated in each of five different styles (Watercolor, Illustration, Sketch, Pop Art, 3D Cartoon). The filterable grid-based visualization allows to compare outputs across control sketches and diffusion styles, highlighting recurring patterns and emergent features precipitated by the probing exercise.">ⓘ</span>
+        </div>
+        <div class="series-buttons">
+            <button class="series active" data-series="wc">Watercolor</button>
+            <button class="series active" data-series="ill">Illustration</button>
+            <button class="series active" data-series="bw">Sketch</button>
+            <button class="series active" data-series="pa">Pop Art</button>
+            <button class="series active" data-series="3d">3D Cartoon</button>
+        </div>
+    </div>
+    <div class="container" id="container"></div>
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <img id="modalImg">
+        </div>
+    </div>
+
+    <script>
+        const SERIES = ['wc', 'ill', 'bw', 'pa', '3d'];
+        const FOLDERS = ['1 Dot', '2 Circle Small', '3 Circle', '4 Oval', '5 Oval Vertical', '6 Circles Horizontal', '7 Circles Vertical', '8 Drop', '9 Almond', '10 Blob', '11 Semicircle', '12 Semicircle Up', '13 Semicircle Down', '14 Dots', '15 Line Vertical', '16 Lines Vertical', '17 Line Horizontal', '18 Lines Horizontal', '19 Rectangle Tall', '20 Rectangle Vertical', '21 Square', '22 Diamond Vertical', '23 Diamond', '24 Rectangle Rounded', '25 Triangle', '26 Triangle Down', '27 Triangle Tall', '28 L', '29 Pentagram', '30 Star'];
+        const folderSymbols = { '1 Dot': '·', '2 Circle Small': '⚬', '3 Circle': 'o', '4 Oval': '⬭', '5 Oval Vertical': '⬯', '6 Circles Horizontal': '∞', '7 Circles Vertical': '8', '8 Drop': '🌢', '9 Almond': '⬬', '10 Blob': '✶', '11 Semicircle': '◖', '12 Semicircle Up': '◠', '13 Semicircle Down': '◡', '14 Dots': '⁘', '15 Line Vertical': '|', '16 Lines Vertical': '║', '17 Line Horizontal': '─', '18 Lines Horizontal': '═', '19 Rectangle Tall': '❚', '20 Rectangle Vertical': '▯', '21 Square': '☐', '22 Diamond Vertical': '◊', '23 Diamond': '◇', '24 Rectangle Rounded': '▢', '25 Triangle': '△', '26 Triangle Down': '▽', '27 Triangle Tall': '▼', '28 L': 'L', '29 Pentagram': '⬠', '30 Star': '⛤' };
+        const seriesVis = { wc: 1, ill: 1, bw: 1, pa: 1, '3d': 1 };
+        let folderVis = {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            FOLDERS.forEach(f => folderVis[f] = true);
+            document.querySelectorAll('#seriesBtns .series').forEach(b => { b.onclick = () => toggle('series', b); });
+            FOLDERS.forEach(f => {
+                const b = document.createElement('button');
+                b.textContent = folderSymbols[f];
+                b.title = f.replace(/^\d+\s+/, '');
+                b.classList.toggle('active', folderVis[f]);
+                b.onclick = () => toggle('folder', b, f);
+                document.getElementById('folderBtns').appendChild(b);
+            });
+            render();
+        });
+
+        function toggle(type, btn, folder) {
+            if (type === 'series') {
+                const s = btn.dataset.series;
+                seriesVis[s] = !seriesVis[s];
+            } else {
+                folderVis[folder] = !folderVis[folder];
+            }
+            btn.classList.toggle('active');
+            render();
+        }
+
+        function render() {
+            const c = document.getElementById('container');
+            c.innerHTML = '';
+            FOLDERS.filter(f => folderVis[f]).forEach(f => {
+                const row = document.createElement('div');
+                row.className = 'row';
+                ['index', ...SERIES.filter(s => seriesVis[s]).flatMap(s => [1, 2, 3].map(i => s + i))].forEach(img => {
+                    const box = document.createElement('div');
+                    box.className = 'img-box';
+                    const el = document.createElement('img');
+                    el.src = `./images/${f}/${img}.jpg`;
+                    el.onclick = () => openModal(`./images/${f}/${img}.jpg`);
+                    box.appendChild(el);
+                    row.appendChild(box);
+                });
+                c.appendChild(row);
+            });
+        }
+
+        function openModal(src) { document.getElementById('modal').classList.add('active'); document.getElementById('modalImg').src = src; }
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+        window.onclick = (e) => e.target.id === 'modal' && closeModal();
+        window.onkeydown = (e) => e.key === 'Escape' && closeModal();
+    </script>
+</body>
+</html>
