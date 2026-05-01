@@ -6,27 +6,50 @@
     <title>Control Sketching</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial; background: white; padding-top: 45px; padding-left: 10px; padding-right: 10px; padding-bottom: 45px; }
-        .controls { position: fixed; top: 0; left: 0; right: 0; width: 100%; display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; align-content: flex-start; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 999; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: white; padding: 45px 10px; }
+        
+        /* Controls */
+        .controls { position: fixed; top: 0; left: 0; right: 0; padding: 10px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 999; display: flex; flex-wrap: wrap; gap: 10px; }
         #folderBtns { display: flex; flex-wrap: wrap; gap: 10px; }
-        #seriesBtns { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; padding: 10px; background: white; box-shadow: 0 -2px 8px rgba(0,0,0,0.1); z-index: 999; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+        
+        #seriesBtns { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px; background: white; box-shadow: 0 -2px 8px rgba(0,0,0,0.1); z-index: 999; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
         .series-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
-        .series-info { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; position: relative; }
-        .info-icon { cursor: help; font-weight: bold; color: #333; display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; position: relative; }
-        .info-icon::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: white; color: #666; padding: 10px 12px; border: 1px solid #ccc; border-radius: 0; font-size: 11px; font-weight: normal; width: 400px; display: block; white-space: normal; word-wrap: break-word; text-align: justify; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 1001; }
+        .series-info { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; }
+        
+        /* Info icon */
+        .info-icon { cursor: help; font-weight: bold; color: #333; width: 16px; height: 16px; line-height: 16px; text-align: center; display: inline-flex; align-items: center; justify-content: center; position: relative; }
+        .info-icon::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: white; color: #666; padding: 10px 12px; border: 1px solid #ccc; border-radius: 3px; font-size: 11px; font-weight: normal; width: 400px; white-space: normal; text-align: justify; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 1001; }
         .info-icon:hover::after { opacity: 1; }
-        button { padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; font-size: 12px; border-radius: 3px; white-space: nowrap; }
+        
+        /* Buttons */
+        button { padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; font-size: 12px; border-radius: 3px; white-space: nowrap; transition: background 0.15s; }
         button:hover { background: #e0e0e0; }
+        button:focus { outline: 2px solid #333; outline-offset: 2px; }
         button.active { background: #333; color: white; border-color: #333; }
+        
+        /* Grid */
         .container { display: flex; flex-direction: column; gap: 5px; }
         .row { display: flex; gap: 5px; max-height: 60vh; }
         .img-box { flex: 1; overflow: hidden; cursor: pointer; background: #f5f5f5; aspect-ratio: 1/1; }
         .img-box img { width: 100%; height: 100%; object-fit: contain; }
+        .img-box img:hover { filter: brightness(0.95); }
+        
+        /* Modal */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .modal-content { background: white; padding: 20px; max-width: 90%; max-height: 90%; position: relative; }
-        .modal-close { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: #333; color: white; border: none; cursor: pointer; font-size: 18px; padding: 0; }
+        
+        .modal-close { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: #333; color: white; border: none; padding: 0; font-size: 20px; line-height: 1; }
+        .modal-close:hover { background: #555; }
+        
         .modal img { width: 100%; height: auto; max-height: 80vh; }
+        
+        .modal-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.9); border: none; font-size: 24px; padding: 10px 15px; cursor: pointer; }
+        .modal-nav:hover { background: rgba(255,255,255,1); }
+        .modal-nav:focus { outline: 2px solid #333; }
+        .modal-prev { left: 20px; }
+        .modal-next { right: 20px; }
     </style>
 </head>
 <body>
@@ -49,66 +72,210 @@
     <div class="container" id="container"></div>
     <div class="modal" id="modal">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">×</button>
-            <img id="modalImg">
+            <button class="modal-close" aria-label="Close" title="Close (Esc)">×</button>
+            <button class="modal-nav modal-prev" aria-label="Previous" title="Previous (←)">‹</button>
+            <button class="modal-nav modal-next" aria-label="Next" title="Next (→)">›</button>
+            <img id="modalImg" alt="">
         </div>
     </div>
 
     <script>
+        // Constants
         const SERIES = ['wc', 'ill', 'bw', 'pa', '3d'];
         const FOLDERS = ['1 Dot', '2 Circle Small', '3 Circle', '4 Oval', '5 Oval Vertical', '6 Circles Horizontal', '7 Circles Vertical', '8 Drop', '9 Almond', '10 Blob', '11 Semicircle', '12 Semicircle Up', '13 Semicircle Down', '14 Dots', '15 Line Vertical', '16 Lines Vertical', '17 Line Horizontal', '18 Lines Horizontal', '19 Rectangle Tall', '20 Rectangle Vertical', '21 Square', '22 Diamond Vertical', '23 Diamond', '24 Rectangle Rounded', '25 Triangle', '26 Triangle Down', '27 Triangle Tall', '28 L', '29 Pentagram', '30 Star'];
-        const folderSymbols = { '1 Dot': '·', '2 Circle Small': '⚬', '3 Circle': 'o', '4 Oval': '⬭', '5 Oval Vertical': '⬯', '6 Circles Horizontal': '∞', '7 Circles Vertical': '8', '8 Drop': '🌢', '9 Almond': '⬬', '10 Blob': '✶', '11 Semicircle': '◖', '12 Semicircle Up': '◠', '13 Semicircle Down': '◡', '14 Dots': '⁘', '15 Line Vertical': '|', '16 Lines Vertical': '║', '17 Line Horizontal': '─', '18 Lines Horizontal': '═', '19 Rectangle Tall': '❚', '20 Rectangle Vertical': '▯', '21 Square': '☐', '22 Diamond Vertical': '◊', '23 Diamond': '◇', '24 Rectangle Rounded': '▢', '25 Triangle': '△', '26 Triangle Down': '▽', '27 Triangle Tall': '▼', '28 L': 'L', '29 Pentagram': '⬠', '30 Star': '⛤' };
+        const FOLDER_SYMBOLS = { '1 Dot': '·', '2 Circle Small': '⚬', '3 Circle': 'o', '4 Oval': '⬭', '5 Oval Vertical': '⬯', '6 Circles Horizontal': '∞', '7 Circles Vertical': '8', '8 Drop': '🌢', '9 Almond': '⬬', '10 Blob': '✶', '11 Semicircle': '◖', '12 Semicircle Up': '◠', '13 Semicircle Down': '◡', '14 Dots': '⁘', '15 Line Vertical': '|', '16 Lines Vertical': '║', '17 Line Horizontal': '─', '18 Lines Horizontal': '═', '19 Rectangle Tall': '❚', '20 Rectangle Vertical': '▯', '21 Square': '☐', '22 Diamond Vertical': '◊', '23 Diamond': '◇', '24 Rectangle Rounded': '▢', '25 Triangle': '△', '26 Triangle Down': '▽', '27 Triangle Tall': '▼', '28 L': 'L', '29 Pentagram': '⬠', '30 Star': '⛤' };
+        const OUTPUTS_PER_SERIES = 3;
+        const INDEX_COL = 0;
+        
+        // State
         const seriesVis = { wc: 1, ill: 1, bw: 1, pa: 1, '3d': 1 };
-        let folderVis = {};
+        const folderVis = {};
+        let imageGrid = [];
+        let currentModal = { folderIdx: 0, imgIdx: 0 };
+        const imageCache = {};
 
-        document.addEventListener('DOMContentLoaded', () => {
+        // Helpers
+        const getVisibleSeries = () => SERIES.filter(s => seriesVis[s]);
+        const getVisibleFolders = () => FOLDERS.filter(f => folderVis[f]);
+        const getImagesPerRow = () => 1 + getVisibleSeries().length * OUTPUTS_PER_SERIES;
+
+        // DOM helpers
+        const $ = (id) => document.getElementById(id);
+        const updateImage = (src) => $('modalImg').src = src;
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        function init() {
+            // Initialize folder visibility
             FOLDERS.forEach(f => folderVis[f] = true);
-            document.querySelectorAll('#seriesBtns .series').forEach(b => { b.onclick = () => toggle('series', b); });
-            FOLDERS.forEach(f => {
-                const b = document.createElement('button');
-                b.textContent = folderSymbols[f];
-                b.title = f.replace(/^\d+\s+/, '');
-                b.classList.toggle('active', folderVis[f]);
-                b.onclick = () => toggle('folder', b, f);
-                document.getElementById('folderBtns').appendChild(b);
+            
+            // Attach series button listeners
+            document.querySelectorAll('#seriesBtns .series').forEach(b => {
+                b.addEventListener('click', () => toggleSeries(b));
             });
+            
+            // Create folder buttons
+            FOLDERS.forEach(f => {
+                const btn = document.createElement('button');
+                btn.textContent = FOLDER_SYMBOLS[f];
+                btn.title = f.replace(/^\d+\s+/, '');
+                btn.classList.add('active');
+                btn.setAttribute('aria-label', `Toggle ${btn.title}`);
+                btn.addEventListener('click', () => toggleFolder(btn, f));
+                $('folderBtns').appendChild(btn);
+            });
+            
+            // Setup modal buttons
+            $('modal').addEventListener('click', (e) => {
+                if (e.target.id === 'modal') closeModal();
+            });
+            document.querySelector('.modal-close').addEventListener('click', closeModal);
+            document.querySelector('.modal-prev').addEventListener('click', () => navigateModal(-1, 0));
+            document.querySelector('.modal-next').addEventListener('click', () => navigateModal(1, 0));
+            document.addEventListener('keydown', handleKeyboard);
+            
             render();
-        });
+        }
 
-        function toggle(type, btn, folder) {
-            if (type === 'series') {
-                const s = btn.dataset.series;
-                seriesVis[s] = !seriesVis[s];
-            } else {
-                folderVis[folder] = !folderVis[folder];
-            }
+        function toggleSeries(btn) {
+            const series = btn.dataset.series;
+            seriesVis[series] = !seriesVis[series];
+            btn.classList.toggle('active');
+            render();
+        }
+
+        function toggleFolder(btn, folder) {
+            folderVis[folder] = !folderVis[folder];
             btn.classList.toggle('active');
             render();
         }
 
         function render() {
-            const c = document.getElementById('container');
-            c.innerHTML = '';
-            FOLDERS.filter(f => folderVis[f]).forEach(f => {
+            const container = $('container');
+            container.innerHTML = '';
+            imageGrid = [];
+            
+            const visibleSeries = getVisibleSeries();
+            const imagesPerRow = getImagesPerRow();
+            
+            getVisibleFolders().forEach((folder, folderIdx) => {
                 const row = document.createElement('div');
                 row.className = 'row';
-                ['index', ...SERIES.filter(s => seriesVis[s]).flatMap(s => [1, 2, 3].map(i => s + i))].forEach(img => {
+                const rowImages = [];
+                
+                // Create image list: index + series outputs
+                const imageNames = ['index', ...visibleSeries.flatMap(s => 
+                    Array.from({length: OUTPUTS_PER_SERIES}, (_, i) => s + (i + 1))
+                )];
+                
+                imageNames.forEach((img, imgIdx) => {
                     const box = document.createElement('div');
                     box.className = 'img-box';
+                    
                     const el = document.createElement('img');
-                    el.src = `./images/${f}/${img}.jpg`;
-                    el.onclick = () => openModal(`./images/${f}/${img}.jpg`);
+                    el.src = `./images/${folder}/thumbnails/${img}.jpg`;
+                    el.dataset.full = `./images/${folder}/${img}.jpg`;
+                    el.dataset.folder = folder;
+                    el.dataset.img = img;
+                    el.dataset.folderIdx = folderIdx;
+                    el.dataset.imgIdx = imgIdx;
+                    el.alt = `${folder} - ${img}`;
+                    el.addEventListener('click', () => openModal(el));
+                    
                     box.appendChild(el);
                     row.appendChild(box);
+                    rowImages.push(el);
                 });
-                c.appendChild(row);
+                
+                container.appendChild(row);
+                imageGrid.push(rowImages);
             });
         }
 
-        function openModal(src) { document.getElementById('modal').classList.add('active'); document.getElementById('modalImg').src = src; }
-        function closeModal() { document.getElementById('modal').classList.remove('active'); }
-        window.onclick = (e) => e.target.id === 'modal' && closeModal();
-        window.onkeydown = (e) => e.key === 'Escape' && closeModal();
+        function openModal(imgEl) {
+            currentModal = {
+                folderIdx: parseInt(imgEl.dataset.folderIdx),
+                imgIdx: parseInt(imgEl.dataset.imgIdx)
+            };
+            $('modal').classList.add('active');
+            updateImage(imgEl.dataset.full);
+            preloadAdjacentImages();
+        }
+
+        function navigateModal(dx, dy) {
+            let { folderIdx, imgIdx } = currentModal;
+            const rowLength = imageGrid[folderIdx].length;
+            
+            if (dx !== 0) {
+                imgIdx += dx;
+                // Skip index column and wrap within row
+                if (imgIdx === INDEX_COL) {
+                    imgIdx += dx; // Skip the index image
+                }
+                if (imgIdx < 1) {
+                    imgIdx = rowLength - 1;
+                } else if (imgIdx >= rowLength) {
+                    imgIdx = 1;
+                }
+            }
+            
+            if (dy !== 0) {
+                folderIdx += dy;
+                if (folderIdx < 0 || folderIdx >= imageGrid.length) return;
+                // Adjust imgIdx to skip index if needed
+                if (imgIdx === INDEX_COL) {
+                    imgIdx = 1;
+                }
+            }
+            
+            const targetEl = imageGrid[folderIdx][imgIdx];
+            if (targetEl?.dataset.full) {
+                currentModal = { folderIdx, imgIdx };
+                updateImage(targetEl.dataset.full);
+                preloadAdjacentImages();
+            }
+        }
+
+        function preloadAdjacentImages() {
+            const { folderIdx, imgIdx } = currentModal;
+            
+            // Preload left and right only
+            [[-1, 0], [1, 0]].forEach(([dx, dy]) => {
+                let newIdx = imgIdx + dx;
+                
+                // Skip index column
+                if (newIdx === INDEX_COL) newIdx += dx;
+                if (newIdx < 1 || newIdx >= imageGrid[folderIdx].length) return;
+                
+                const src = imageGrid[folderIdx][newIdx].dataset.full;
+                if (src && !imageCache[src]) {
+                    const img = new Image();
+                    img.src = src;
+                    imageCache[src] = img;
+                }
+            });
+        }
+
+        function handleKeyboard(e) {
+            if (!$('modal').classList.contains('active')) return;
+            
+            const keyMap = {
+                'ArrowLeft': () => navigateModal(-1, 0),
+                'ArrowRight': () => navigateModal(1, 0),
+                'ArrowUp': () => navigateModal(0, -1),
+                'ArrowDown': () => navigateModal(0, 1),
+                'Escape': closeModal
+            };
+            
+            if (keyMap[e.key]) {
+                e.preventDefault();
+                keyMap[e.key]();
+            }
+        }
+
+        function closeModal() {
+            $('modal').classList.remove('active');
+        }
     </script>
 </body>
 </html>
